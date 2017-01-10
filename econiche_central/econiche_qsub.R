@@ -26,33 +26,6 @@
 
 
 
-####### In the main script
-## Make sure you setwd to a folder that has a r_shell.sh
-
-## Delete existing results
-system(paste0("rm ",data_dir,"/results_*.csv"))
-
-njobs <- 50
-for(jobnum in 1:njobs) {
-  qsub(paste0("jobname_",jobnum), paste0(code_dir,"/code_file.R"), pass=list(jobnum), proj="proj_geospatial", log=T, slots=1)
-}
-
-## Check for results
-check_loc_results(c(1:njobs),data_dir,prefix="results_",postfix=".csv")
-
-
-########## Within the child script
-jobnum <- commandArgs()[3]
-data <- fread(paste0(data_dir,"/simulation_",jobnum,".csv"))
-
-.
-.
-.
-
-write.csv(paste0(data_dir,"/results_",jobnum,".csv"))
-
-
-
 qsub <- function(jobname, code, hold=NULL, pass=NULL, slots=1, submit=F, log=T, intel=F, proj = "proj_mortenvelope") { #do not need to define hold unless multi-step; pass parameters
   user <- Sys.getenv("USER") # Default for linux user grab. "USERNAME" for Windows
   # choose appropriate shell script 
