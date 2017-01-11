@@ -16,51 +16,50 @@
 ########################################################################################
 #Setting up
 ########################################################################################
-
+if (Sys.info()[1] == "Linux"){
+  j <- "/home/j"
+  h <- paste0("/homes/",Sys.info()[6])
+  #setwd("/home/j/temp/stearns7/eco_niche/")
+}else{
+  j <- "J:"
+  h <- "H:"
+  #setwd("J:/temp/stearns7/eco_niche/")
+}
 ## Set repo location 
-repo <- '/share/code/geospatial/stearns7/eco_niche/'
+repo <- 'J:/temp/stearns7/eco_niche/'  
 
 ## Set data location
-data_loc <- '/share/temp/stearns7/schisto/data/eco_niche_data/'
+data_loc <- 'J:/temp/stearns7/schisto/data/eco_niche_data/'
 
 ## Load libraries
 setwd(repo)
-root <- ifelse(Sys.info()[1]=="Windows", "J:/", "/home/j/") 
-package_lib <- paste0(root,'/temp/stearns7/packages') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
-.libPaths(package_lib)# Ensures packages look for dependencies here when called with library().
 
-# Load seeg functions file
-source('econiche_central/functions.R')                   
-source('econiche_central/brt_model.R')
-source('econiche_central/econiche_qsub.R')  
-source('econiche_central/check_loc_results.R')  
+pacman::p_load(devtools, seegMBG, seegSDM, INLA, snowfall, seeg, data.table, magrittr, stringr, reshape2, ggplot2, readbulk, dplyr, Amelia, plyr) #install in H drive and call packages/specify pkg location on cluster
 
-# Load packages
-package_list <- c('seeg', 'stringr', 'reshape2', 'ggplot2', 'dplyr', 'Amelia', 'rgeos', 'data.table','raster','rgdal','INLA','seegSDM','seegMBG','plyr','sp')
-for(package in package_list) {
-  library(package, lib.loc = package_lib, character.only=TRUE)
-}
 
-# Set the RNG seed
-set.seed(1)
+# Load functions files
+source(paste0(repo,'/code/econiche_central/functions.R'))                   
+source(paste0(repo, '/code/econiche_central/brt_model.R')) #need to rectify
+source(paste0(repo, '/code/econiche_central/econiche_qsub.R'))  
+source(paste0(repo, '/code/econiche_central/check_loc_results.R'))  
 
 # Set output path
-outpath <- 'schisto/output/'
+outpath <- (paste0(data_loc, 'output/'))
 
 ########################################################################################
 # Preparing the data
 ########################################################################################
 
 # Load covariate raster brick here (created ahead of time)
-covs <- raster(paste0(data_loc, "schisto_covs.grd"))
+covs <- raster(paste0(data_loc, "/covariates/schisto_covs.grd"))
 print('Loading covariate brick')
 
 # Occurrence data - schisto point data; will need to change for each species, currently
-occ <- load(paste0(data_loc, 'man_fin.rda'))
+occ <- load(paste0(data_loc, '/man_fin.rda'))
 print('Loading occurrence data')
 
 # Generate pseudo-absence data according to the aridity surface and suppress prob so as to not weight by aridity 
-aridity <- raster(paste0(data_loc, "aridity_annual.tif"))
+aridity <- raster(paste0(data_loc, "/covariates/aridity_annual.tif"))
 print('Loading grid for background point generation')
 
 bg <- bgSample(aridity, # Weighting grid - population in this case, custom function defined in github 
@@ -68,12 +67,15 @@ bg <- bgSample(aridity, # Weighting grid - population in this case, custom funct
                prob = FALSE, # Set to FALSE so doesn't weight by raster specified above
                replace = TRUE,
                spatial = FALSE)
+print('Generating background data')
 
 colnames(bg) <- c('long', 'lat') 
 bg <- data.frame(bg)
+print('Making background data into a dataframe')
 
 # Add an outbreak id to this
 bg$outbreak_id <- 0
+print('Assigning an outbreak id')
 
 # Combine the occurrence and background records
 dat <- rbind(cbind(PA = rep(1, nrow(occ)),
@@ -94,40 +96,36 @@ print('Adding extracted covariate values to the occurrence and background record
 dat_all <- na.omit(dat_all)
 print('Omitting all null values from dataframe')
 
+write.csv(dat_all, file = (paste0(dat_loc, "dat_all.csv")))
+###output as ref csv for random permutations and create new script to randomly sample and call from qsub; and set seed in qsub call
+
 ########################################################################################
 # Preparing to run models
 ########################################################################################
-ncpu <- 50 #controls how many cores to be used when submitting qsub - need to profile job then adjust as necessary
-nboot <- ncpu * 1 #no. of bootstraps; determines number of model runs - reduced to 50 for first run# dummy this to 1 for profiling
-
-# create a list with random permutations of dat_all, sampling one occurrence
-# from each polygon in each iteration, the bootstrapping as usual.
-# This way there's more jitter and it avoids the horrible normalization in
-# gbm which otherwise gives some points a weight of ~250 (!).
-# This is like k-folds stuff in mbg; subsample custom function
-data_list <- replicate(nboot,
-                       subsamplePolys(dat_all,
-                                      minimum = c(30, 30)), #half of actual data points
-                       simplify = FALSE)
-#save out each combination as csv; feed into qsub
-
-## Make sure you setwd to a folder that has a r_shell.sh
-
-## Delete existing results
-system(paste0("rm ",data_loc,"/results_*.csv"))
-
-njobs <- nboot # ??? right?
+njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 for first run# dummy this to 1 for profiling
 ########################################################################################
 #Parallelizing
 ########################################################################################
 
 for(jobnum in 1:njobs) {
-  qsub(paste0("jobname_",jobnum), paste0(code_dir,"/code_file.R"), pass=list(jobnum), proj="proj_geospatial", log=T, slots=1)
+  qsub(paste0("jobname_",jobnum), paste0(repo,"/econiche_central/brt_model.R"), pass=list(jobnum), proj="proj_geospatial", log=T, slots=1)
 }
 
 ## Check for results - makes sure models running and allows time for them to run
+Sys.sleep(600)
 check_loc_results(c(1:njobs),data_dir,prefix="results_",postfix=".csv")
 
+########################################################################################
+#Bring in model and stats and make into 2 lists; run a loop around job_num from 1:njobs and load, then kick into a list
+
+model_list <- 
+  stat_lis <- 
+  
+  # summarise all the ensembles
+  preds <- stack(lapply(model_list, '[[', 4)) #4th component likely the prediction raster layer
+
+# summarise the predictions in parallel
+preds_sry <- combinePreds(preds)
 
 ########################################################################################
 
@@ -201,7 +199,7 @@ short_names <- c(
   'tcb',
   'tcw',
   'Schistosomiasis distribution')
-  
+
 
 units <- c(
   'mm',
