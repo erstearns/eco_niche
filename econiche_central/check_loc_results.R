@@ -37,7 +37,7 @@ check_loc_results <- function(locations,check_dir,prefix="",postfix,sleep=30) {
       }
       time_counter <- time_counter + 1
       Sys.sleep(sleep)
-      if(time_counter * (sleep/60) > 180) stop("Jobs are taking over 3 hours -- stopping execution") 
+      #if(time_counter * (sleep/60) > 180) stop("Jobs are taking over 3 hours -- stopping execution") 
     }
   }
 }

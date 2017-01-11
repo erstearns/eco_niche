@@ -26,7 +26,7 @@
 
 
 
-qsub <- function(jobname, code, hold=NULL, pass=NULL, slots=1, submit=F, log=T, intel=F, proj = "proj_mortenvelope") { #do not need to define hold unless multi-step; pass parameters
+qsub <- function(jobname, code, hold=NULL, pass=NULL, slots=10, submit=F, log=T, intel=F, proj = "proj_geospatial") { #do not need to define hold unless multi-step; pass parameters
   user <- Sys.getenv("USER") # Default for linux user grab. "USERNAME" for Windows
   # choose appropriate shell script 
   if(grepl(".r", code, fixed=T) | grepl(".R", code, fixed=T)) shell <- "r_shell.sh" else if(grepl(".py", code, fixed=T)) shell <- "python_shell.sh" else shell <- "stata_shell.sh" 
