@@ -125,14 +125,12 @@ check_loc_results(c(1:njobs),data_dir,prefix="results_",postfix=".csv")
 
 ########################################################################################
 #Bring in model and stats and make into 2 lists; run a loop around job_num from 1:njobs and load, then kick into a list
-jobnum <- commandArgs()[3]
+model_filenames <- list.files(path=paste0(outpath, "/"), pattern = "model")
+stat_filenames <- list.files(path=paste0(outpath, "/"),  pattern = "stat")
 
-r_files <- dir(outpath, pattern = ".RData")
-
-for (i in 1:length(r_files)) {
-  model_list <- list(grep("model"))
-  stat_lis <- list(grep("stats"))
-}
+#Reading in files and making into lists
+model_list <- lapply(paste0(outpath,"/",model_filenames), fread)
+stat_lis <- lapply(paste0(outpath,"/",stat_filenames), fread)
 
 # summarise all the ensembles
 preds <- stack(lapply(model_list, '[[', 4)) #4th component likely the prediction raster layer
