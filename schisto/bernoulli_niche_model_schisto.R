@@ -47,7 +47,7 @@ source(paste0(repo, '/econiche_central/econiche_qsub.R'))
 source(paste0(repo, '/econiche_central/check_loc_results.R'))  
 
 ## Create run date in correct format - calls make_time_stamp function from 'functions' - copied from Nick Graetz's in 'prep_functions' for MBG code
-time_stamp <- Sys.time() #quick fix for now 1/11/17
+time_stamp <- TRUE 
 run_date <- make_time_stamp(time_stamp)
 
 # Set output path
@@ -58,10 +58,7 @@ outpath <- (paste0(data_loc, '/output'))
 ########################################################################################
 
 # Load covariate raster brick here (created ahead of time)
-covs <- raster(paste0(data_loc, "/covariates/schisto_covs.grd"))
-#quick fix was to create briock in gahi_schisto_1 script then do the below to load properly
-covs <- brick(new)
-
+covs <- brick(paste0(data_loc, "/covariates/schisto_covs.grd"))
 print('Loading covariate brick')
 
 # Occurrence data - schisto point data; will need to change for each species, currently mansonia

@@ -28,7 +28,7 @@ source(paste0(repo, '/econiche_central/functions.R'))
 dat_all <- read.csv((paste0(data_loc, "/dat_all.csv"))) 
 
 # Set the RNG seed
-set.seed(1)
+set.seed(jobnum) #change/omit
 
 data_sample <- subsample(dat_all,
                           n = 100, #random choice
