@@ -1,5 +1,18 @@
 # function file
 
+## Make time stamp in standardized format.
+make_time_stamp <- function(time_stamp) {
+  
+  run_date <- gsub("-","_",Sys.time())
+  run_date <- gsub(":","_",run_date)
+  run_date <- gsub(" ","_",run_date)
+  
+  if(time_stamp==FALSE) run_date <- 'scratch'
+  
+  return(run_date)
+  
+}
+
 firstDay <- function (year, month) {
   # given a year and month, return a Date object of the first day of that month
   date_string <- paste(year,
