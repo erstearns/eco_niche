@@ -68,8 +68,12 @@ covs <- raster(paste0(data_loc, "/covariates/schisto_covs.grd"))
 print('Loading covariate brick')
 
 # Occurrence data - schisto point data; will need to change for each species, currently mansonia
-occ <- load(paste0(data_loc, '/man_fin.rda'))
+occ <- read.csv(file = (paste0(data_loc, 'man_fin.csv')))
 print('Loading occurrence data')
+
+#'x' column in there for some reason - need to drop and may need to comment next line out
+occ <- occ[,c(2:4)]
+
 
 # Generate pseudo-absence data according to the aridity surface and suppress weighting (prob=FALSE) so as to not weight by aridity pixel values
 aridity <- raster(paste0(data_loc, "/covariates/aridity_annual.tif"))
@@ -87,18 +91,25 @@ bg <- data.frame(bg)
 print('Making background data into a dataframe')
 
 # Add an outbreak id to this
-bg$outbreak_id <- 0
-print('Assigning an outbreak id')
+bg$presence <- 0
+print('Assigning 0s for presence')
+
+# Need to re-organize bg df to match format of occ
+bg$latitude <- bg$lat
+bg$longitude <- bg$long
+bg <- bg[,c(3:5)]
 
 # Combine the occurrence and background records
 dat <- rbind(cbind(PA = rep(1, nrow(occ)),
-                   occ[, c('long', 'lat', 'outbreak_id')]),
+                   occ[, c('presence', 'latitude', 'longitude')]),
              cbind(PA = rep(0, nrow(bg)),
                    bg))
 print('Combining occurrence and background records')
 
+blargh <- rbind(occ, bg)
+
 # Get the covariate values for every data point - pseudo and actual
-dat_covs <- extract(covs, dat[, 2:3])  #this is where we will need ot update to include years/subset by years, extract to those subsets, then re-merge
+dat_covs <- extract(covs, dat[, 2:3])  #this is where we will need to update to include years/subset by years, extract to those subsets, then re-merge
 print('Getting covariate values for every data point - background and observed')
 
 # Then add them
@@ -119,9 +130,10 @@ njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 
 ########################################################################################
 #Parallelizing
 ########################################################################################
+parallel_script <- (paste0(repo,"/econiche_central/brt_model.R"))
 
 for(jobnum in 1:njobs) {
-  qsub(paste0("jobname_",jobnum), paste0(repo,"/econiche_central/brt_model.R"), pass=list(jobnum), proj="proj_geospatial", log=T, slots=1)
+  qsub(paste0("jobname_",jobnum), parallel_script, pass=list(jobnum), proj="proj_geospatial", log=T, slots=1)
 }
 
 ## Check for results - makes sure models running and allows time for them to run
@@ -132,12 +144,15 @@ check_loc_results(c(1:njobs),data_dir,prefix="results_",postfix=".csv")
 #Bring in model and stats and make into 2 lists; run a loop around job_num from 1:njobs and load, then kick into a list
 jobnum <- commandArgs()[3]
 
+r_files <- dir(outpath, pattern = ".RData")
 
-model_list <- 
-  stat_lis <- 
-  
-  # summarise all the ensembles
-  preds <- stack(lapply(model_list, '[[', 4)) #4th component likely the prediction raster layer
+for (i in 1:length(r_files)) {
+  model_list <- list(grep("model"))
+  stat_lis <- list(grep("stats"))
+}
+
+# summarise all the ensembles
+preds <- stack(lapply(model_list, '[[', 4)) #4th component likely the prediction raster layer
 
 # summarise the predictions in parallel
 preds_sry <- combinePreds(preds)

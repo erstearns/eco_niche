@@ -1,10 +1,45 @@
 
 jobnum <- commandArgs()[3]
-repo <- 'C:/Users/stearns7/OneDrive - UW Office 365/ecological_niche_models'
-outpath <- (paste0(repo, '/code/schisto/output/'))
-source('econiche_central/functions.R')                   
+repo <- 'J:/temp/stearns7/eco_niche/'  
+outpath <- (paste0(data_loc, 'output/'))
+source(paste0(repo, '/econiche_central/functions.R'))                     
+
+## Set repo location 
+repo <- 'J:/temp/stearns7/eco_niche/'  
+
+## Set data location
+data_loc <- 'J:/temp/stearns7/schisto/data/eco_niche_data/'
+
+## Load libraries
+setwd(repo)
+
+####
+root <- paste0(j, "temp/stearns7/eco_niche/")  ###################  ?????????????????
+OR
+root <- ifelse(Sys.info()[1]=="Windows", "J:/", "/home/j/") ###################### ??????????????????
+####
 
 
+
+package_lib <- paste0(root,'/temp/stearns7/packages') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
+.libPaths(package_lib)# Ensures packages look for dependencies here when called with library().
+
+# Load packages
+package_list <- c('seeg', 'stringr', 'reshape2', 'ggplot2', 'dplyr', 'Amelia', 'rgeos', 'data.table','raster','rgdal','INLA','seegSDM','seegMBG','plyr','sp')
+for(package in package_list) {
+  library(package, lib.loc = package_lib, character.only=TRUE)
+}
+
+# Load functions files
+source(paste0(repo, '/econiche_central/functions.R'))                   
+  
+## Create run date in correct format - calls make_time_stamp function from 'functions' - copied from Nick Graetz's in 'prep_functions' for MBG code
+run_date <- make_time_stamp(time_stamp)
+
+# Set output path
+outpath <- (paste0(data_loc, 'output/'))
+
+#########################################################################################
 
 # create a list with random permutations of dat_all, 
 # This is like k-folds stuff in mbg; subsample custom function
@@ -28,7 +63,7 @@ model <- runBRT(data_sample,
 stats <- getStats(model)
 
 # Output model results
-save(model, stats, file = paste0(outpath, jobnum,".RData"))
+save(model, stats, file = paste0(outpath, run_date, jobnum,".RData"))
 
 
 
