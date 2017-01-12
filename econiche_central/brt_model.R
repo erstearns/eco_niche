@@ -20,7 +20,7 @@ for(package in package_list) {
 
 # Load functions files
 source(paste0(repo, '/econiche_central/functions.R'))                   
-  
+
 #########################################################################################
 
 # create a list with random permutations of dat_all, 
@@ -45,14 +45,8 @@ model <- runBRT(data_sample,
 stats <- getStats(model)
 
 # Output model results
-save(model, stats, file = paste0(outpath, run_date, jobnum,".RData"))
+write.csv(model, file = paste0(outpath, "/model_", run_date, jobnum,".csv") )
+write.csv(model, file = paste0(outpath, "/stats_", run_date, jobnum,".csv") )
 
 
-
-
-#things to be reset - all objects called
-#repo
-#outpath
-#data_loc
-#covs
 
