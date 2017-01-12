@@ -18,7 +18,7 @@
 ########################################################################################
 if (Sys.info()[1] == "Linux"){
   j <- "/home/j"
-  h <- paste0("/homes/",Sys.info()[6])
+  h <- paste0("/homes/",Sys.info()[6]) # what is this 6?
   #setwd("/home/j/temp/stearns7/eco_niche/")
 }else{
   j <- "J:"
@@ -34,14 +34,27 @@ data_loc <- 'J:/temp/stearns7/schisto/data/eco_niche_data/'
 ## Load libraries
 setwd(repo)
 
-pacman::p_load(devtools, seegMBG, seegSDM, INLA, snowfall, seeg, data.table, magrittr, stringr, reshape2, ggplot2, readbulk, dplyr, Amelia, plyr) #install in H drive and call packages/specify pkg location on cluster
+root <- paste0(j, "temp/stearns7/eco_niche/")  ###################  ?????????????????
+OR
+root <- ifelse(Sys.info()[1]=="Windows", "J:/", "/home/j/") ###################### ??????????????????
 
+package_lib <- paste0(root,'/temp/stearns7/packages') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
+.libPaths(package_lib)# Ensures packages look for dependencies here when called with library().
+
+# Load packages
+package_list <- c('seeg', 'stringr', 'reshape2', 'ggplot2', 'dplyr', 'Amelia', 'rgeos', 'data.table','raster','rgdal','INLA','seegSDM','seegMBG','plyr','sp')
+for(package in package_list) {
+  library(package, lib.loc = package_lib, character.only=TRUE)
+}
 
 # Load functions files
-source(paste0(repo,'/code/econiche_central/functions.R'))                   
-source(paste0(repo, '/code/econiche_central/brt_model.R')) #need to rectify
-source(paste0(repo, '/code/econiche_central/econiche_qsub.R'))  
-source(paste0(repo, '/code/econiche_central/check_loc_results.R'))  
+source(paste0(repo, '/econiche_central/functions.R'))                   
+source(paste0(repo, '/econiche_central/brt_model.R')) #need to rectify
+source(paste0(repo, '/econiche_central/econiche_qsub.R'))  
+source(paste0(repo, '/econiche_central/check_loc_results.R'))  
+
+## Create run date in correct format - calls make_time_stamp function from 'functions' - copied from Nick Graetz's in 'prep_functions' for MBG code
+run_date <- make_time_stamp(time_stamp)
 
 # Set output path
 outpath <- (paste0(data_loc, 'output/'))
@@ -54,11 +67,11 @@ outpath <- (paste0(data_loc, 'output/'))
 covs <- raster(paste0(data_loc, "/covariates/schisto_covs.grd"))
 print('Loading covariate brick')
 
-# Occurrence data - schisto point data; will need to change for each species, currently
+# Occurrence data - schisto point data; will need to change for each species, currently mansonia
 occ <- load(paste0(data_loc, '/man_fin.rda'))
 print('Loading occurrence data')
 
-# Generate pseudo-absence data according to the aridity surface and suppress prob so as to not weight by aridity 
+# Generate pseudo-absence data according to the aridity surface and suppress weighting (prob=FALSE) so as to not weight by aridity pixel values
 aridity <- raster(paste0(data_loc, "/covariates/aridity_annual.tif"))
 print('Loading grid for background point generation')
 
@@ -117,6 +130,8 @@ check_loc_results(c(1:njobs),data_dir,prefix="results_",postfix=".csv")
 
 ########################################################################################
 #Bring in model and stats and make into 2 lists; run a loop around job_num from 1:njobs and load, then kick into a list
+jobnum <- commandArgs()[3]
+
 
 model_list <- 
   stat_lis <- 
