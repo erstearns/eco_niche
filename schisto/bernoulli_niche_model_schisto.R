@@ -19,26 +19,20 @@
 if (Sys.info()[1] == "Linux"){
   j <- "/home/j"
   h <- paste0("/homes/",Sys.info()[6]) # what is this 6?
-  #setwd("/home/j/temp/stearns7/eco_niche/")
 }else{
   j <- "J:"
   h <- "H:"
-  #setwd("J:/temp/stearns7/eco_niche/")
 }
 ## Set repo location 
-repo <- 'J:/temp/stearns7/eco_niche/'  
+repo <- (paste0(j,'/temp/stearns7/eco_niche')) 
 
 ## Set data location
-data_loc <- 'J:/temp/stearns7/schisto/data/eco_niche_data/'
+data_loc <- (paste0(j, '/temp/stearns7/schisto/data/eco_niche_data'))
 
 ## Load libraries
 setwd(repo)
 
-root <- paste0(j, "temp/stearns7/eco_niche/")  ###################  ?????????????????
-OR
-root <- ifelse(Sys.info()[1]=="Windows", "J:/", "/home/j/") ###################### ??????????????????
-
-package_lib <- paste0(root,'/temp/stearns7/packages') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
+package_lib <- paste0(j,'/temp/stearns7/packages') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
 .libPaths(package_lib)# Ensures packages look for dependencies here when called with library().
 
 # Load packages
@@ -49,15 +43,15 @@ for(package in package_list) {
 
 # Load functions files
 source(paste0(repo, '/econiche_central/functions.R'))                   
-source(paste0(repo, '/econiche_central/brt_model.R')) #need to rectify
 source(paste0(repo, '/econiche_central/econiche_qsub.R'))  
 source(paste0(repo, '/econiche_central/check_loc_results.R'))  
 
 ## Create run date in correct format - calls make_time_stamp function from 'functions' - copied from Nick Graetz's in 'prep_functions' for MBG code
+time_stamp <- Sys.time() #quick fix for now 1/11/17
 run_date <- make_time_stamp(time_stamp)
 
 # Set output path
-outpath <- (paste0(data_loc, 'output/'))
+outpath <- (paste0(data_loc, '/output'))
 
 ########################################################################################
 # Preparing the data
@@ -65,14 +59,14 @@ outpath <- (paste0(data_loc, 'output/'))
 
 # Load covariate raster brick here (created ahead of time)
 covs <- raster(paste0(data_loc, "/covariates/schisto_covs.grd"))
+#quick fix was to create briock in gahi_schisto_1 script then do the below to load properly
+covs <- brick(new)
+
 print('Loading covariate brick')
 
 # Occurrence data - schisto point data; will need to change for each species, currently mansonia
-occ <- read.csv(file = (paste0(data_loc, 'man_fin.csv')))
+occ <- read.csv(file = (paste0(data_loc, '/man_fin.csv')))
 print('Loading occurrence data')
-
-#'x' column in there for some reason - need to drop and may need to comment next line out
-occ <- occ[,c(2:4)]
 
 
 # Generate pseudo-absence data according to the aridity surface and suppress weighting (prob=FALSE) so as to not weight by aridity pixel values
@@ -91,22 +85,14 @@ bg <- data.frame(bg)
 print('Making background data into a dataframe')
 
 # Add an outbreak id to this
-bg$presence <- 0
-print('Assigning 0s for presence')
-
-# Need to re-organize bg df to match format of occ
-bg$latitude <- bg$lat
-bg$longitude <- bg$long
-bg <- bg[,c(3:5)]
+bg$outbreak_id <- 0
 
 # Combine the occurrence and background records
 dat <- rbind(cbind(PA = rep(1, nrow(occ)),
-                   occ[, c('presence', 'latitude', 'longitude')]),
+                   occ[, c('long', 'lat', 'outbreak_id')]),
              cbind(PA = rep(0, nrow(bg)),
                    bg))
 print('Combining occurrence and background records')
-
-blargh <- rbind(occ, bg)
 
 # Get the covariate values for every data point - pseudo and actual
 dat_covs <- extract(covs, dat[, 2:3])  #this is where we will need to update to include years/subset by years, extract to those subsets, then re-merge
@@ -126,14 +112,14 @@ write.csv(dat_all, file = (paste0(dat_loc, "dat_all.csv")))
 ########################################################################################
 # Preparing to run models
 ########################################################################################
-njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 for first run# dummy this to 1 for profiling
+njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 for first run# 
 ########################################################################################
 #Parallelizing
 ########################################################################################
 parallel_script <- (paste0(repo,"/econiche_central/brt_model.R"))
 
 for(jobnum in 1:njobs) {
-  qsub(paste0("jobname_",jobnum), parallel_script, pass=list(jobnum), proj="proj_geospatial", log=T, slots=1)
+  qsub(paste0("jobname_",jobnum), parallel_script, pass=list(jobnum, repo, outpath, data_loc, run_date, package_lib, covs), proj="proj_geospatial", log=T, slots=1)
 }
 
 ## Check for results - makes sure models running and allows time for them to run
