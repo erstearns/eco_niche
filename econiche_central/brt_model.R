@@ -31,7 +31,7 @@ dat_all <- read.csv((paste0(data_loc, "/dat_all.csv")))
 set.seed(jobnum) #change/omit
 
 data_sample <- subsample(dat_all,
-                          n = 100, #random choice
+                          n = 500, #random choice
                           minimum = c(30, 30)) #half of actual data points; changed from 30,30
                           #simplify = FALSE)
 

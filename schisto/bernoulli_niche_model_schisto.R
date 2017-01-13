@@ -19,9 +19,11 @@
 if (Sys.info()[1] == "Linux"){
   j <- "/home/j"
   h <- paste0("/home/",Sys.info()[6]) # what is this 6?
+  package_lib <- paste0(j,'/temp/stearns7/packages_cl') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
 }else{
   j <- "J:"
   h <- "H:"
+  package_lib <- paste0(j,'/temp/stearns7/packages')
 }
 ## Set repo location 
 repo <- (paste0(j,'/temp/stearns7/eco_niche')) 
@@ -32,7 +34,7 @@ data_loc <- (paste0(j, '/temp/stearns7/schisto/data/eco_niche_data'))
 ## Load libraries
 setwd(repo)
 
-package_lib <- paste0(j,'/temp/stearns7/packages') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
+# Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
 .libPaths(package_lib)# Ensures packages look for dependencies here when called with library().
 
 # Load functions files
@@ -41,7 +43,7 @@ source(paste0(repo, '/econiche_central/econiche_qsub.R'))
 source(paste0(repo, '/econiche_central/check_loc_results.R'))  
 
 # Load packages
-package_list <- c('car', 'MASS', 'seeg', 'stringr', 'reshape2', 'ggplot2', 'dplyr', 'Amelia', 'rgeos', 'data.table','raster','rgdal','INLA','seegSDM','seegMBG','plyr','sp')
+package_list <- c('car', 'MASS', 'stringr', 'reshape2', 'ggplot2', 'plyr', 'dplyr', 'rgeos', 'data.table','raster','rgdal', 'seegSDM','sp')
 for(package in package_list) {
   library(package, lib.loc = package_lib, character.only=TRUE)
 }
@@ -72,7 +74,7 @@ aridity <- raster(paste0(data_loc, "/covariates/aridity_annual.tif"))
 print('Loading grid for background point generation')
 
 bg <- bgSample(aridity, # Weighting grid - population in this case, custom function defined in github 
-               n = 10000, # Background data points desired
+               n = 1000, # Background data points desired
                prob = FALSE, # Set to FALSE so doesn't weight by raster specified above
                replace = TRUE,
                spatial = FALSE)
@@ -91,6 +93,9 @@ dat <- rbind(cbind(PA = rep(1, nrow(occ)),
              cbind(PA = rep(0, nrow(bg)),
                    bg))
 print('Combining occurrence and background records')
+ 
+#need to drop 'outbreak_id'
+dat <- dat[,c(1:3)]
 
 # Get the covariate values for every data point - pseudo and actual
 dat_covs <- extract(covs, dat[, 2:3])  #this is where we will need to update to include years/subset by years, extract to those subsets, then re-merge
@@ -104,7 +109,7 @@ print('Adding extracted covariate values to the occurrence and background record
 dat_all <- na.omit(dat_all)
 print('Omitting all null values from dataframe')
 
-write.csv(dat_all, file = (paste0(dat_loc, "dat_all.csv")))
+write.csv(dat_all, file = (paste0(data_loc, "dat_all.csv")))
 ###output as ref csv for random permutations and create new script to randomly sample and call from qsub; and set seed in qsub call
 
 ########################################################################################
@@ -116,8 +121,10 @@ njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 
 ########################################################################################
 parallel_script <- (paste0(repo,"/econiche_central/brt_model.R"))
 
+jobblah <- seq(1, njobs, 1)
+
 for(jobnum in 1:njobs) {
-  qsub(paste0("jobname_",jobnum), parallel_script, pass=list(jobnum, repo, outpath, data_loc, run_date, package_lib, covs), proj="proj_geospatial", log=T, slots=1)
+  qsub(paste0("jobname_", jobblah[jobnum]), parallel_script, pass=list(jobnum, repo, outpath, data_loc, run_date, package_lib, covs), proj="proj_geospatial", log=T, slots=10)
 }
 
 ## Check for results - makes sure models running and allows time for them to run
