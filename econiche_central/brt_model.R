@@ -4,7 +4,6 @@ outpath <- commandArgs()[5]
 data_loc <- commandArgs()[6]
 run_date <-  commandArgs()[7]
 package_lib <- commandArgs()[8]
-covs <- commandArgs()[9]
 
 ## Load libraries
 setwd(repo)
@@ -22,6 +21,7 @@ for(package in package_list) {
 source(paste0(repo, '/econiche_central/functions.R'))                   
 
 #########################################################################################
+covs <- brick(paste0(data_loc, "/covariates/schisto_covs.grd"))
 
 # create a list with random permutations of dat_all, 
 # This is like k-folds stuff in mbg; subsample custom function
@@ -45,8 +45,8 @@ model <- runBRT(data_sample,
 stats <- getStats(model)
 
 # Output model results
-write.csv(model, file = paste0(outpath, "/model_", run_date, jobnum,".csv") )
-write.csv(model, file = paste0(outpath, "/stats_", run_date, jobnum,".csv") )
+write.csv(model, file = paste0(outpath, "/model_", run_date, jobnum,".csv"))
+write.csv(model, file = paste0(outpath, "/stats_", run_date, jobnum,".csv"))
 
 
 
