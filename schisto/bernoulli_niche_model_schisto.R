@@ -19,14 +19,14 @@
 if (Sys.info()[1] == "Linux"){
   j <- "/home/j"
   h <- paste0("/home/",Sys.info()[6]) # what is this 6?
-  package_lib <- paste0(j,'/temp/stearns7/packages_cl') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
+  package_lib <- paste0(j,'/temp/stearns7/packages_cl') # Library for packages on cluster. Ensures that none of this code is dependent on the machine where the user runs the code.
 }else{
   j <- "J:"
   h <- "H:"
-  package_lib <- paste0(j,'/temp/stearns7/packages')
+  package_lib <- paste0(j,'/temp/stearns7/packages') #library for packages locally
 }
 ## Set repo location 
-repo <- '/share/code/geospatial/stearns7/eco_niche/'
+repo <- '/share/code/geospatial/stearns7/eco_niche'
 
 ## Set data location
 data_loc <- (paste0(j, '/temp/stearns7/schisto/data/eco_niche_data'))
@@ -109,7 +109,7 @@ print('Adding extracted covariate values to the occurrence and background record
 dat_all <- na.omit(dat_all)
 print('Omitting all null values from dataframe')
 
-write.csv(dat_all, file = (paste0(data_loc, "dat_all.csv")))
+write.csv(dat_all, file = (paste0(data_loc, "/dat_all.csv")))
 ###output as ref csv for random permutations and create new script to randomly sample and call from qsub; and set seed in qsub call
 
 ########################################################################################
