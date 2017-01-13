@@ -18,7 +18,7 @@
 ########################################################################################
 if (Sys.info()[1] == "Linux"){
   j <- "/home/j"
-  h <- paste0("/homes/",Sys.info()[6]) # what is this 6?
+  h <- paste0("/home/",Sys.info()[6]) # what is this 6?
 }else{
   j <- "J:"
   h <- "H:"
@@ -35,16 +35,17 @@ setwd(repo)
 package_lib <- paste0(j,'/temp/stearns7/packages') # Library for packages. Ensures that none of this code is dependent on the machine where the user runs the code.
 .libPaths(package_lib)# Ensures packages look for dependencies here when called with library().
 
-# Load packages
-package_list <- c('seeg', 'stringr', 'reshape2', 'ggplot2', 'dplyr', 'Amelia', 'rgeos', 'data.table','raster','rgdal','INLA','seegSDM','seegMBG','plyr','sp')
-for(package in package_list) {
-  library(package, lib.loc = package_lib, character.only=TRUE)
-}
-
 # Load functions files
 source(paste0(repo, '/econiche_central/functions.R'))                   
 source(paste0(repo, '/econiche_central/econiche_qsub.R'))  
 source(paste0(repo, '/econiche_central/check_loc_results.R'))  
+
+# Load packages
+package_list <- c('car', 'MASS', 'seeg', 'stringr', 'reshape2', 'ggplot2', 'dplyr', 'Amelia', 'rgeos', 'data.table','raster','rgdal','INLA','seegSDM','seegMBG','plyr','sp')
+for(package in package_list) {
+  library(package, lib.loc = package_lib, character.only=TRUE)
+}
+
 
 ## Create run date in correct format - calls make_time_stamp function from 'functions' - copied from Nick Graetz's in 'prep_functions' for MBG code
 time_stamp <- TRUE 
