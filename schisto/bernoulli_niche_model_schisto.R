@@ -20,10 +20,12 @@ if (Sys.info()[1] == "Linux"){
   j <- "/home/j"
   h <- paste0("/home/",Sys.info()[6]) # what is this 6?
   package_lib <- paste0(j,'/temp/stearns7/packages_cl') # Library for packages on cluster. Ensures that none of this code is dependent on the machine where the user runs the code.
+  repo <- '/share/code/geospatial/stearns7/eco_niche'
 }else{
   j <- "J:"
   h <- "H:"
   package_lib <- paste0(j,'/temp/stearns7/packages') #library for packages locally
+  repo <- paste0(j, '/temp/stearns7/eco_niche')
 }
 ## Set repo location 
 repo <- '/share/code/geospatial/stearns7/eco_niche'

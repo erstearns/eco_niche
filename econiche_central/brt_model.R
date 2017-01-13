@@ -12,7 +12,7 @@ setwd(repo)
 .libPaths(package_lib)# Ensures packages look for dependencies here when called with library().
 
 # Load packages
-package_list <- c('seeg', 'stringr', 'reshape2', 'ggplot2', 'dplyr', 'Amelia', 'rgeos', 'data.table','raster','rgdal','INLA','seegSDM','seegMBG','plyr','sp')
+package_list <- c('car', 'MASS', 'stringr', 'reshape2', 'ggplot2', 'plyr', 'dplyr', 'rgeos', 'data.table','raster','rgdal', 'seegSDM','sp')
 for(package in package_list) {
   library(package, lib.loc = package_lib, character.only=TRUE)
 }
