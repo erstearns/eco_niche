@@ -26,7 +26,7 @@ if (Sys.info()[1] == "Linux"){
   package_lib <- paste0(j,'/temp/stearns7/packages')
 }
 ## Set repo location 
-repo <- (paste0(j,'/temp/stearns7/eco_niche')) 
+repo <- '/share/code/geospatial/stearns7/eco_niche/'
 
 ## Set data location
 data_loc <- (paste0(j, '/temp/stearns7/schisto/data/eco_niche_data'))
@@ -121,10 +121,8 @@ njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 
 ########################################################################################
 parallel_script <- (paste0(repo,"/econiche_central/brt_model.R"))
 
-jobblah <- seq(1, njobs, 1)
-
 for(jobnum in 1:njobs) {
-  qsub(paste0("jobname_", jobblah[jobnum]), parallel_script, pass=list(jobnum, repo, outpath, data_loc, run_date, package_lib, covs), proj="proj_geospatial", log=T, slots=10)
+  qsub(paste0("jobname_", jobnum), parallel_script, pass=list(jobnum, repo, outpath, data_loc, run_date, package_lib), proj="proj_geospatial", log=T, slots=10, submit=T)
 }
 
 ## Check for results - makes sure models running and allows time for them to run
