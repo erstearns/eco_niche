@@ -32,7 +32,7 @@ set.seed(jobnum) #change/omit
 
 data_sample <- subsample(dat_all,
                           n = 500, #random choice
-                          minimum = c(30, 30)) #half of actual data points; changed from 30,30
+                          minimum = c(1, 30)) #half of actual data points; changed from 30,30
                           #simplify = FALSE)
 
 model <- runBRT(data_sample,

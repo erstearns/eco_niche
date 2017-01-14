@@ -74,7 +74,7 @@ aridity <- raster(paste0(data_loc, "/covariates/aridity_annual.tif"))
 print('Loading grid for background point generation')
 
 bg <- bgSample(aridity, # Weighting grid - population in this case, custom function defined in github 
-               n = 1000, # Background data points desired
+               n = 2500, # Background data points desired
                prob = FALSE, # Set to FALSE so doesn't weight by raster specified above
                replace = TRUE,
                spatial = FALSE)
@@ -112,13 +112,13 @@ print('Omitting all null values from dataframe')
 write.csv(dat_all, file = (paste0(data_loc, "/dat_all.csv")))
 ###output as ref csv for random permutations and create new script to randomly sample and call from qsub; and set seed in qsub call
 
-########################################################################################
-# Preparing to run models
-########################################################################################
-njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 for first run# 
+ 
 ########################################################################################
 #Parallelizing
 ########################################################################################
+
+njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 for first run#
+
 parallel_script <- (paste0(repo,"/econiche_central/brt_model.R"))
 
 for(jobnum in 1:njobs) {
