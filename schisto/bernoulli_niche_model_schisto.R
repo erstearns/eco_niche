@@ -28,6 +28,11 @@ if (Sys.info()[1] == "Linux"){
   repo <- paste0(j, '/temp/stearns7/eco_niche') ## Set repo location locally
 }
 
+library('parallel')
+slots = 25
+cores_to_use = ifelse(grepl('Intel', system("cat /proc/cpuinfo | grep \'name\'| uniq", inter = T)), floor(slots * .86), floor(slots*.64))
+
+
 ## Set data location
 data_loc <- (paste0(j, '/temp/stearns7/schisto/data/eco_niche_data'))
 
@@ -67,7 +72,7 @@ print('Loading covariate brick')
 # Occurrence data - schisto point data; will need to change for each species, currently mansonia
 occ <- read.csv(file = (paste0(data_loc, '/man_fin.csv')))
 print('Loading occurrence data')
-
+occ <- occ[,c(2:4)]
 
 # Generate pseudo-absence data according to the aridity surface and suppress weighting (prob=FALSE) so as to not weight by aridity pixel values
 aridity <- raster(paste0(data_loc, "/covariates/aridity_annual.tif"))
@@ -116,27 +121,29 @@ write.csv(dat_all, file = (paste0(data_loc, "/dat_all.csv")))
 ########################################################################################
 #Parallelizing
 ########################################################################################
+#create multiple versions of the dataset via sample
+data_sample = lapply(1:25, function(x) subsample(dat_all, 800, minimum= c(30,30)))
 
-njobs <- 50 #no. of bootstraps; determines number of model runs - reduced to 50 for first run#
+#Run the brts
+models <- mclapply(data_sample, function(x) runBRT(x,
+                                                   gbm.x = 4:ncol(x),
+                                                   gbm.y = 1,
+                                                   pred.raster = covs, #brick
+                                                   gbm.coords = 2:3,
+                                                   wt = function(PA) ifelse(PA == 1, 1, sum(PA) / sum(1 - PA))),mc.cores = cores_to_use )
 
-parallel_script <- (paste0(repo,"/econiche_central/brt_model.R"))
+#get model stats
+model_stats <- suppressWarnings(lapply(models, function(x) getStats(x)))
 
-for(jobnum in 1:njobs) {
-  qsub(paste0("jobname_", jobnum), parallel_script, pass=list(jobnum, repo, outpath, data_loc, run_date, package_lib), proj="proj_geospatial", log=T, slots=10, submit=T)
-}
+#get all the prediction results
+preds <- brick(lapply(models, '[[', 4)) #4th component likely the prediction raster layer
+# summarise the predictions in parallel
+preds_sry <- combinePreds(preds)
 
-## Check for results - makes sure models running and allows time for them to run
-Sys.sleep(600)
-check_loc_results(c(1:njobs),data_dir,prefix="results_",postfix=".csv")
+model_stats = rblindlist(model_stats)
 
-########################################################################################
-#Bring in model and stats and make into 2 lists; run a loop around job_num from 1:njobs and load, then kick into a list
-model_filenames <- list.files(path=paste0(outpath, "/"), pattern = "model")
-stat_filenames <- list.files(path=paste0(outpath, "/"),  pattern = "stat")
+head(model_stats)
 
-#Reading in files and making into lists
-model_list <- lapply(paste0(outpath,"/",model_filenames), fread)
-stat_lis <- lapply(paste0(outpath,"/",stat_filenames), fread)
 
 # summarise all the ensembles
 preds <- stack(lapply(model_list, '[[', 4)) #4th component likely the prediction raster layer
