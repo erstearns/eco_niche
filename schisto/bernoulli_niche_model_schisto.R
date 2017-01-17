@@ -15,7 +15,15 @@
 
 ########################################################################################
 #Setting up
+
+# - Initially examining environment and indicating file paths dependent on OS - Linux vs Windows
+# - Calling 'parallel' and specifying cores 
+# - Setting data location, output path,  working directory and library
+# - Sourcing external function scripts
+# - Loading packages
+# - Creating a time stamp for model run
 ########################################################################################
+
 if (Sys.info()[1] == "Linux"){
   j <- "/home/j"
   h <- paste0("/home/",Sys.info()[6]) # what is this 6?
@@ -29,12 +37,16 @@ if (Sys.info()[1] == "Linux"){
 }
 
 library('parallel')
-slots = 25
+slots = 40  
+#if i requested 40 slots, how many cores does this mean?
 cores_to_use = ifelse(grepl('Intel', system("cat /proc/cpuinfo | grep \'name\'| uniq", inter = T)), floor(slots * .86), floor(slots*.64))
 
 
 ## Set data location
 data_loc <- (paste0(j, '/temp/stearns7/schisto/data/eco_niche_data'))
+
+# Set output path
+outpath <- (paste0(data_loc, '/output'))
 
 ## Load libraries
 setwd(repo)
@@ -58,11 +70,17 @@ for(package in package_list) {
 time_stamp <- TRUE 
 run_date <- make_time_stamp(time_stamp)
 
-# Set output path
-outpath <- (paste0(data_loc, '/output'))
-
 ########################################################################################
 # Preparing the data
+
+# - Loading the covariate raster brick - created prior to running this script
+# - Loading occurrence data - cleaned and formatted prior to running this script
+# - Generating background data using the pixel grid of the aridity layer
+# - Coercing background data into a data frame and assigning each set of coordinates a value of '0' for outbreak_id/prev value
+# - Joining the occurrence and background data into single data frame and creating new binary var to indicate presence/absence (PA) then dropping 'outbreak_id'
+# - Extracting values for each covariate at every data point (occurrence and background)
+# - Joining these covariate vals to the greater data frame (w/ occurrence and background data)
+# - Omitting all null values - coastlines issues likely
 ########################################################################################
 
 # Load covariate raster brick here (created ahead of time)
@@ -114,14 +132,17 @@ print('Adding extracted covariate values to the occurrence and background record
 dat_all <- na.omit(dat_all)
 print('Omitting all null values from dataframe')
 
-write.csv(dat_all, file = (paste0(data_loc, "/dat_all.csv")))
-###output as ref csv for random permutations and create new script to randomly sample and call from qsub; and set seed in qsub call
+write.csv(dat_all, file = (paste0(data_loc, "/dat_all.csv"))) ## may be able to remove if do not run the below
 
- 
 ########################################################################################
-#Parallelizing
+# Running a BRT ensemble in parallel
+
+# - Extract a random subset of n records from data, ensuring that there are at least minimum presence and absence records in the subset. Default assumes first 
+#          column is presence/absence column
+# - Running the BRT ensemble in parallel
+# - Getting model validation statistics for model objects - Given an object returned by runBRT, extract devBern, rmse, auc, Kappa, sensitivity and specificity and proportion correctly classified (pcc) validation statistics - calculated using either the PresenceAbsence or seegSDM functions. Note that auc is calculated with a seegSDM clone of the auc function in PresenceAbsence but in which worse-than-random AUC scores are not inverted.
 ########################################################################################
-#create multiple versions of the dataset via sample
+#create multiple versions of the dataset via sample; right now: takes 25 samples of 800 obs with at least 30 presence and 30 absence points
 data_sample = lapply(1:25, function(x) subsample(dat_all, 800, minimum= c(30,30)))
 
 #Run the brts
@@ -130,35 +151,48 @@ models <- mclapply(data_sample, function(x) runBRT(x,
                                                    gbm.y = 1,
                                                    pred.raster = covs, #brick
                                                    gbm.coords = 2:3,
-                                                   wt = function(PA) ifelse(PA == 1, 1, sum(PA) / sum(1 - PA))),mc.cores = cores_to_use )
+                                                   wt = function(PA) ifelse(PA == 1, 1, sum(PA) / sum(1 - PA))),mc.cores = cores_to_use ) #mc.cores defined above
 
+########################################################################################
+#Getting model validation statistics for model objects 
+
+# - Given an object returned by runBRT, extract devBern, rmse, auc, Kappa, sensitivity and specificity and proportion correctly classified (pcc) 
+#   validation statistics - calculated using either the PresenceAbsence or seegSDM functions. Note that auc is calculated with a seegSDM clone of 
+#   the auc function in PresenceAbsence but in which worse-than-random AUC scores are not inverted.
+
+#Summarizing the BRT ensemble 
+#There are three helper functions to help us summarize the BRT ensemble: 
+#1. getRelInf
+#2. getEffectPlots
+#3. combinePreds
+########################################################################################
 #get model stats
 model_stats <- suppressWarnings(lapply(models, function(x) getStats(x)))
 
-#get all the prediction results
+#get all the prediction results - lapply to extract the predictions into a list then coerce the list into a rasterbrick
 preds <- brick(lapply(models, '[[', 4)) #4th component likely the prediction raster layer
-# summarise the predictions in parallel
+
+#3. combinePreds: combines the prediction maps (on the probability scale) from multiple models and returns rasters giving the mean, median and quantiles
+#                 of the ensemble predictions. unlike the previous two functions, combinePreds needs a RasterBrick or RasterStack object with each layers 
+#                 giving a single prediction. So we need to create one of these before we can use combinePreds. Note that we can also run combinePreds in 
+#                 parallel to save some time if the rasters are particularly large.
+# Run combinePreds - could summarise the predictions in parallel
 preds_sry <- combinePreds(preds)
 
-model_stats = rblindlist(model_stats)
-
-head(model_stats)
-
-
-# summarise all the ensembles
-preds <- stack(lapply(model_list, '[[', 4)) #4th component likely the prediction raster layer
-
-# summarise the predictions in parallel
-preds_sry <- combinePreds(preds)
-
-########################################################################################
+# plot the resulting maps - interactive sessions
+plot(preds_sry, zlim = c(0, 1))
 
 # convert the stats list into a matrix using the do.call function
-stats <- do.call("rbind", stat_lis)
+stats <- do.call("rbind", model_stats)
+head(stats)
+
+# and produce a boxplot of a few imnportant statistics
+boxplot(stats[, 3:7], col = 'grey', ylim = c(0, 1))
 
 # save them
 write.csv(stats,
           paste0(outpath, '/stats.csv'))
+
 
 names(preds_sry) <- c('mean',
                       'median',
@@ -168,20 +202,35 @@ names(preds_sry) <- c('mean',
 # save the prediction summary
 writeRaster(preds_sry,
             file = paste0(outpath,
-                          'Schisto'),
+                          '/Schisto'),
             format = 'GTiff',
             overwrite = TRUE)
+############################################################################################################################
+#We now have a list of model outputs, each of which contains the fitted model, predictions and information for plotting. 
+#We can pull out individual model runs and plot the predictions.
+############################################################################################################################
+# par(mfrow = c(1, 2))
+# plot(models[[1]]$pred, main = 'run 1', zlim = c(0, 1))
+# plot(models[[25]]$pred, main = 'run 25', zlim = c(0, 1))
 
-# save the relative influence scores - look up function; functional form responses,
-relinf <- getRelInf(model_list)
+############################################################################################################################
+#Summarizing the BRT ensemble 
+#There are three helper functions to help us summarize the BRT ensemble: 
+
+#1. getRelInf: combines the models to get summaries of the relative influence of the covariates across all the models. 
+#              It returns a matrix of means and quantiles, and optionally produces a boxplot.
+relinf <- getRelInf(models, plot = TRUE)
+print("Summarizing relative influence of covariates across all models")
+
+#Save the relative influence scores
 write.csv(relinf,
           file = paste0(outpath,
-                        'relative_influence.csv'))
-
+                        '/relative_influence.csv'))
+print("saving relative influence scores as a csv file")
 
 # plot the risk map
 png(paste0(outpath,
-           'Schisto.png'),
+           '/Schisto.png'),
     width = 2000,
     height = 2000,
     pointsize = 30)
@@ -200,10 +249,41 @@ points(dat[dat$PA == 1, 2:3],
 
 dev.off()
 
+#2. getEffectPlots: performs a similar operation for the effect plots, optionally plotting mean effects with uncertainty intervals.
+par(mfrow = c(1, 3))
 
-########################################################################################
+
+###########################################################################################################################
+# Optional - We can create a simple map of prediction uncertainty by subtracting the lower from the upper quantile.
+##########################################################################################################################
+
+# calculate uncertainty
+preds$uncertainty <- preds[[4]] - preds[[3]]
+
+# plot mean and uncertainty
+par(mfrow = c(1, 2))
+
+# plot mean
+plot(preds$mean,
+     zlim = c(0, 1),
+     main = 'mean')
+
+# and uncertainty
+plot(preds$uncertainty,
+     col = topo.colors(100),
+     main = 'uncertainty')
+
+# write the mean prediction and uncertainty rasters as Geo-Tiffs
+writeRaster(preds$mean, paste0(outpath, '/prediction_map.tif'), format = 'GTiff')
+writeRaster(preds$uncertainty, paste0(outpath, '/uncertainty_map.tif'), format = 'GTiff')
+###########################################################################################################################
+
+
+
+##########################################################################################################################3
 # Plot marginal effect curves
 ########################################################################################
+effect <- getEffectPlots(models, plot = TRUE)
 
 # get the order of plots (all except relinf)! - customize list to covs of interest
 order <- match(rownames(relinf), names(covs))
@@ -241,7 +321,6 @@ units <- c(
   'suitability index')
 
 
-effect <- getEffectPlots(model_list)
 
 # Set up device 
 png(paste0(outpath,
