@@ -21,17 +21,17 @@ for(package in package_list) {
 source(paste0(repo, '/econiche_central/functions.R'))                   
 
 #########################################################################################
-covs <- brick(paste0(data_loc, "/covariates/schisto_covs.grd"))
+covs <- brick(paste0(data_loc, "/covariates/schisto_covs1.grd"))
 
 # create a list with random permutations of dat_all, 
 # This is like k-folds stuff in mbg; subsample custom function
-dat_all <- read.csv((paste0(data_loc, "/dat_all.csv"))) 
+dat_all <- read.csv((paste0(outpath, "/interim_output/dat_all", run_date, ".csv"))) 
 
 # Set the RNG seed
 set.seed(jobnum) #change/omit
 
 data_sample <- subsample(dat_all,
-                          n = 500, #random choice
+                          n = 800, #random choice
                           minimum = c(30, 30)) #half of actual data points; changed from 30,30
                           #simplify = FALSE)
 
@@ -45,8 +45,8 @@ model <- runBRT(data_sample,
 stats <- getStats(model)
 
 # Output model results
-write.csv(model, file = paste0(outpath, "/model_", run_date, jobnum,".csv"))
-write.csv(model, file = paste0(outpath, "/stats_", run_date, jobnum,".csv"))
+write.csv(model, file = paste0(outpath, "/interim_output/model_output/model_", run_date, jobnum,".csv"))
+write.csv(model, file = paste0(outpath, "/interim_output/stats_output/stats_", run_date, jobnum,".csv"))
 
 
 
