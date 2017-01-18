@@ -84,7 +84,7 @@ run_date <- make_time_stamp(time_stamp)
 ########################################################################################
 
 # Load covariate raster brick here (created ahead of time)
-covs <- brick(paste0(data_loc, "/covariates/schisto_covs.grd"))
+covs <- brick(paste0(data_loc, "/covariates/schisto_covs1.grd"))
 print('Loading covariate brick')
 
 # Occurrence data - schisto point data; will need to change for each species, currently mansonia
@@ -97,7 +97,7 @@ aridity <- raster(paste0(data_loc, "/covariates/aridity_annual.tif"))
 print('Loading grid for background point generation')
 
 bg <- bgSample(aridity, # Weighting grid - population in this case, custom function defined in github 
-               n = 2500, # Background data points desired
+               n = 5000, # Background data points desired; up to 10,000 point in final run
                prob = FALSE, # Set to FALSE so doesn't weight by raster specified above
                replace = TRUE,
                spatial = FALSE)
@@ -132,7 +132,7 @@ print('Adding extracted covariate values to the occurrence and background record
 dat_all <- na.omit(dat_all)
 print('Omitting all null values from dataframe')
 
-#write.csv(dat_all, file = (paste0(data_loc, "/dat_all.csv"))) ## may be able to remove if do not run the below
+write.csv(dat_all, file = (paste0(data_loc, "/dat_all", run_date, ".csv"))) ## may be able to remove if do not run the below
 
 ########################################################################################
 # Running a BRT ensemble in parallel
@@ -143,7 +143,7 @@ print('Omitting all null values from dataframe')
 # - Getting model validation statistics for model objects - Given an object returned by runBRT, extract devBern, rmse, auc, Kappa, sensitivity and specificity and proportion correctly classified (pcc) validation statistics - calculated using either the PresenceAbsence or seegSDM functions. Note that auc is calculated with a seegSDM clone of the auc function in PresenceAbsence but in which worse-than-random AUC scores are not inverted.
 ########################################################################################
 #create multiple versions of the dataset via sample; right now: takes 25 samples of 800 obs with at least 30 presence and 30 absence points
-data_sample = lapply(1:25, function(x) subsample(dat_all, 800, minimum= c(30,30)))
+data_sample = lapply(1:100, function(x) subsample(dat_all, 800, minimum= c(30,50)))
 
 #Run the brts
 models <- mclapply(data_sample, function(x) runBRT(x,
@@ -203,12 +203,9 @@ names(preds_sry) <- c('mean',
 # save the prediction summary
 writeRaster(preds_sry,
             file = paste0(outpath,
-                          '/Schisto_', run_date),
+                          '/schisto_pred_summary_', run_date),
             format = 'GTiff',
             overwrite = TRUE)
-
-#what's important after this?
-
 
 ############################################################################################################################
 #We now have a list of model outputs, each of which contains the fitted model, predictions and information for plotting. 
@@ -265,27 +262,13 @@ effect <- getEffectPlots(models, plot = FALSE)
 # calculate uncertainty
 preds_sry$uncertainty <- preds_sry[[4]] - preds_sry[[3]]
 
-# plot mean and uncertainty
-par(mfrow = c(1, 2))
-
-# plot mean
-plot(preds_sry$mean,
-     zlim = c(0, 1),
-     main = 'mean')
-
-# and uncertainty
-plot(preds_sry$uncertainty,
-     col = topo.colors(100),
-     main = 'uncertainty')
-
 # write the mean prediction and uncertainty rasters as Geo-Tiffs
 writeRaster(preds_sry$mean, paste0(outpath, '/prediction_map_', run_date, '.tif'), format = 'GTiff')
 writeRaster(preds_sry$uncertainty, paste0(outpath, '/uncertainty_map_', run_date, '.tif'), format = 'GTiff')
 ###########################################################################################################################
 
 
-
-##########################################################################################################################3
+###########################################################################################################################
 # Plot marginal effect curves
 ########################################################################################
 
@@ -303,7 +286,6 @@ short_names <- c(
   'land_cover',
   'ses',
   'urban',
-  'urban_access',
   'dist_fresh',
   'tcb',
   'tcw',
@@ -319,7 +301,6 @@ units <- c(
   '16 classes',
   'Gross cell product',
   'Urban/Rural(3 classes)',
-  'Travel time to nearest settlement',
   'meters',
   'dimensionless',
   'dimensionless',
@@ -329,7 +310,7 @@ units <- c(
 
 # Set up device 
 png(paste0(outpath,
-           '/effects_', run_date, '.png'),
+           '/effects_', run_date, '.pdf'),
     width = 3000,
     height = 3000,
     pointsize = 60)
@@ -351,7 +332,6 @@ for (i in 1:length(effect)) {
   } else {
     ylab = ''
   }
-  
   
   # set up empty plotting region
   plot(df[, 2] ~ df[, 1],
