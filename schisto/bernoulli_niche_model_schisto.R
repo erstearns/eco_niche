@@ -132,7 +132,7 @@ print('Adding extracted covariate values to the occurrence and background record
 dat_all <- na.omit(dat_all)
 print('Omitting all null values from dataframe')
 
-write.csv(dat_all, file = (paste0(data_loc, "/dat_all.csv"))) ## may be able to remove if do not run the below
+#write.csv(dat_all, file = (paste0(data_loc, "/dat_all.csv"))) ## may be able to remove if do not run the below
 
 ########################################################################################
 # Running a BRT ensemble in parallel
@@ -184,6 +184,7 @@ plot(preds_sry, zlim = c(0, 1))
 
 # convert the stats list into a matrix using the do.call function
 stats <- do.call("rbind", model_stats)
+print('Converting stats list into a matrix')
 head(stats)
 
 # and produce a boxplot of a few imnportant statistics
@@ -191,7 +192,7 @@ boxplot(stats[, 3:7], col = 'grey', ylim = c(0, 1))
 
 # save them
 write.csv(stats,
-          paste0(outpath, '/stats.csv'))
+          paste0(outpath, '/stats_', run_date, ".csv"))
 
 
 names(preds_sry) <- c('mean',
@@ -202,9 +203,13 @@ names(preds_sry) <- c('mean',
 # save the prediction summary
 writeRaster(preds_sry,
             file = paste0(outpath,
-                          '/Schisto'),
+                          '/Schisto_', run_date),
             format = 'GTiff',
             overwrite = TRUE)
+
+#what's important after this?
+
+
 ############################################################################################################################
 #We now have a list of model outputs, each of which contains the fitted model, predictions and information for plotting. 
 #We can pull out individual model runs and plot the predictions.
@@ -225,12 +230,12 @@ print("Summarizing relative influence of covariates across all models")
 #Save the relative influence scores
 write.csv(relinf,
           file = paste0(outpath,
-                        '/relative_influence.csv'))
+                        '/relative_influence', run_date, '.csv'))
 print("saving relative influence scores as a csv file")
 
 # plot the risk map
 png(paste0(outpath,
-           '/Schisto.png'),
+           '/Schisto_', run_date, '.png'),
     width = 2000,
     height = 2000,
     pointsize = 30)
@@ -251,31 +256,31 @@ dev.off()
 
 #2. getEffectPlots: performs a similar operation for the effect plots, optionally plotting mean effects with uncertainty intervals.
 par(mfrow = c(1, 3))
-
+effect <- getEffectPlots(models, plot = FALSE)
 
 ###########################################################################################################################
 # Optional - We can create a simple map of prediction uncertainty by subtracting the lower from the upper quantile.
 ##########################################################################################################################
 
 # calculate uncertainty
-preds$uncertainty <- preds[[4]] - preds[[3]]
+preds_sry$uncertainty <- preds_sry[[4]] - preds_sry[[3]]
 
 # plot mean and uncertainty
 par(mfrow = c(1, 2))
 
 # plot mean
-plot(preds$mean,
+plot(preds_sry$mean,
      zlim = c(0, 1),
      main = 'mean')
 
 # and uncertainty
-plot(preds$uncertainty,
+plot(preds_sry$uncertainty,
      col = topo.colors(100),
      main = 'uncertainty')
 
 # write the mean prediction and uncertainty rasters as Geo-Tiffs
-writeRaster(preds$mean, paste0(outpath, '/prediction_map.tif'), format = 'GTiff')
-writeRaster(preds$uncertainty, paste0(outpath, '/uncertainty_map.tif'), format = 'GTiff')
+writeRaster(preds_sry$mean, paste0(outpath, '/prediction_map_', run_date, '.tif'), format = 'GTiff')
+writeRaster(preds_sry$uncertainty, paste0(outpath, '/uncertainty_map_', run_date, '.tif'), format = 'GTiff')
 ###########################################################################################################################
 
 
@@ -283,7 +288,7 @@ writeRaster(preds$uncertainty, paste0(outpath, '/uncertainty_map.tif'), format =
 ##########################################################################################################################3
 # Plot marginal effect curves
 ########################################################################################
-effect <- getEffectPlots(models, plot = TRUE)
+
 
 # get the order of plots (all except relinf)! - customize list to covs of interest
 order <- match(rownames(relinf), names(covs))
@@ -324,7 +329,7 @@ units <- c(
 
 # Set up device 
 png(paste0(outpath,
-           'effects.png'),
+           '/effects_', run_date, '.png'),
     width = 3000,
     height = 3000,
     pointsize = 60)
