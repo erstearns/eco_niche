@@ -10,6 +10,8 @@ outpath <- commandArgs()[4]
 data_loc <- commandArgs()[5]
 run_date <-  commandArgs()[6]
 package_lib <- commandArgs()[7]
+data_dir_model <- commandArgs()[8]
+data_dir_stats <- commandArgs()[9]
 
 ## Load libraries
 setwd(repo)
@@ -28,12 +30,12 @@ source(paste0(repo, '/econiche_central/functions.R'))
 
 #########################################################################################
 #Bring in model and stats and make into 2 lists
-model_filenames <- list.files(path=paste0(outpath, "/interim_output/model_output/"))
-stat_filenames <- list.files(path=paste0(outpath, "/interim_output/stats_output/"))
+model_filenames <- list.files(path = (data_dir_model))
+stat_filenames <- list.files(path = (data_dir_stats))
 
 #Reading in files and making into lists
-model_list <- lapply(paste0(outpath,"/interim_output/model_output/",model_filenames), fread)
-stat_lis <- lapply(paste0(outpath,"/interim_output/stats_output/",stat_filenames), fread)
+model_list <- lapply(paste0(data_dir_model, model_filenames), fread)
+stat_lis <- lapply(paste0(data_dir_stats, stat_filenames), fread)
 
 #get all the prediction results - lapply to extract the predictions into a list then coerce the list into a rasterbrick
 preds <- brick(lapply(model_list, '[[', 4)) #4th component likely the prediction raster layer
