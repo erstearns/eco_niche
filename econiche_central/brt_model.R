@@ -4,6 +4,7 @@ outpath <- commandArgs()[5]
 data_loc <- commandArgs()[6]
 run_date <-  commandArgs()[7]
 package_lib <- commandArgs()[8]
+data_dir <- commandArgs()[9]
 
 ## Load libraries
 setwd(repo)
@@ -44,9 +45,10 @@ model <- runBRT(data_sample,
 
 stats <- getStats(model)
 
+
 # Output model results
-write.csv(model, file = paste0(outpath, "/interim_output/model_output/model_", run_date, jobnum,".csv"))
-write.csv(model, file = paste0(outpath, "/interim_output/stats_output/stats_", run_date, jobnum,".csv"))
+write.csv(model, file = paste0(data_dir,  "/model_output/model_", run_date, jobnum,".csv"))
+write.csv(stats, file = paste0(data_dir, "/stats_output/stats_", run_date, jobnum,".csv"))
 
 
 

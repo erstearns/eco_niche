@@ -1,7 +1,6 @@
 ######################################
-#Original code author: Nick Golding
-#Modified and updated by: Erin Stearns
-#Date: 1/5/17
+#Code author: Erin Stearns
+#Date: 1/5/17 - 1/18/17
 #Code intent: Bernoulli niche model
 #####################################
 
@@ -138,6 +137,10 @@ write.csv(dat_all, file = (paste0(outpath, "/interim_output/dat_all", run_date, 
 #######################################################################################
 #Parallelizing BRT model runs
 #######################################################################################
+data_dir <- paste0(outpath, '/', run_date)
+dir.create(data_dir)
+dir.create(paste0(data_dir,"/model_output"))
+dir.create(paste0(data_dir,"/stats_output"))
 
 #Using qsub calls
 njobs <- 1 #no. of bootstraps; determines number of model runs; trial with 1
@@ -145,12 +148,18 @@ njobs <- 1 #no. of bootstraps; determines number of model runs; trial with 1
 parallel_script_1 <- (paste0(repo,"/econiche_central/brt_model.R"))
 
 for(jobnum in 1:njobs) {
-  qsub(paste0("jobname_", jobnum), parallel_script_1, pass=list(jobnum, repo, outpath, data_loc, run_date, package_lib), proj="proj_geospatial", log=T, slots=10, submit=T)
+  qsub(paste0("jobname_", jobnum), parallel_script_1, pass=list(jobnum, repo, outpath, data_loc, run_date, package_lib, data_dir), proj="proj_geospatial", log=T, slots=10, submit=T)
 }
 
 ## Check for results - makes sure models running and allows time for them to run
+data_dir_model <- paste0(data_dir, '/model_output/')
+data_dir_stats <- paste0(data_dir, '/stats_output/')
+  
 Sys.sleep(600)
-check_loc_results(c(1:njobs),data_dir,prefix="results_",postfix=".csv")
+check_loc_results(c(1:njobs), data_dir_model, prefix="model_",postfix=".csv")
+
+Sys.sleep(600)
+check_loc_results(c(1:njobs), data_dir_stats, prefix="stats_",postfix=".csv")
 
 ########################################################################################
 #Summarizing the BRT ensemble using qsubs
@@ -158,9 +167,32 @@ check_loc_results(c(1:njobs),data_dir,prefix="results_",postfix=".csv")
 
 parallel_script_1 <- (paste0(repo,"/econiche_central/summarize_ensemble.R"))
 
-qsub(summ_ensemble, parallel_script_2, pass=list(repo, outpath, data_loc, run_date, package_lib), proj="proj_geospatial", log=T, slots=10, submit=T)
+qsub(summ_ensemble, parallel_script_2, pass=list(repo, outpath, data_loc, run_date, package_lib, data_dir_model, data_dir_stats), proj="proj_geospatial", log=T, slots=30, submit=T)
 
 ########################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ################################################################################################################################################################
 
