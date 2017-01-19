@@ -165,7 +165,7 @@ check_loc_results(c(1:njobs), data_dir_stats, prefix="stats_",postfix=".csv")
 #Summarizing the BRT ensemble using qsubs
 ########################################################################################
 
-parallel_script_1 <- (paste0(repo,"/econiche_central/summarize_ensemble.R"))
+parallel_script_2 <- (paste0(repo,"/econiche_central/summarize_ensemble.R"))
 
 qsub(summ_ensemble, parallel_script_2, pass=list(repo, outpath, data_loc, run_date, package_lib, data_dir_model, data_dir_stats), proj="proj_geospatial", log=T, slots=30, submit=T)
 

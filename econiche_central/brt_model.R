@@ -1,10 +1,24 @@
-jobnum <- commandArgs()[3]
-repo <-  commandArgs()[4]
-outpath <- commandArgs()[5]
-data_loc <- commandArgs()[6]
-run_date <-  commandArgs()[7]
-package_lib <- commandArgs()[8]
-data_dir <- commandArgs()[9]
+if (test == TRUE) {
+  njobs <- 1
+  jobnum <- (1:njobs)
+  repo <-  ('/share/code/geospatial/stearns7/eco_niche' )
+  source(paste0(repo, '/econiche_central/functions.R'))  
+  outpath <- ('/home/j/temp/stearns7/eco_niche/output')
+  data_loc <- ('/home/j/temp/stearns7/eco_niche/schisto_data')
+  time_stamp <- TRUE 
+  run_date <- "2017_01_18_16_40_47"
+  package_lib <- ('/home/j/temp/stearns7/packages_cl')
+  data_dir <- paste0(outpath, '/', run_date)
+  
+} else {
+  jobnum <- commandArgs()[3]
+  repo <-  commandArgs()[4]
+  outpath <- commandArgs()[5]
+  data_loc <- commandArgs()[6]
+  run_date <-  commandArgs()[7]
+  package_lib <- commandArgs()[8]
+  data_dir <- commandArgs()[9]
+}
 
 ## Load libraries
 setwd(repo)
@@ -27,6 +41,8 @@ covs <- brick(paste0(data_loc, "/covariates/schisto_covs1.grd"))
 # create a list with random permutations of dat_all, 
 # This is like k-folds stuff in mbg; subsample custom function
 dat_all <- read.csv((paste0(outpath, "/interim_output/dat_all", run_date, ".csv"))) 
+dat_all <- dat_all[,(-1)]
+
 
 # Set the RNG seed
 set.seed(jobnum) #change/omit
