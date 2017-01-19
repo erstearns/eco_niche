@@ -144,7 +144,6 @@ dir.create(paste0(data_dir,"/stats_output"))
 
 #Using qsub calls
 njobs <- 1 #no. of bootstraps; determines number of model runs; trial with 1
-
 parallel_script_1 <- (paste0(repo,"/econiche_central/brt_model.R"))
 
 for(jobnum in 1:njobs) {
