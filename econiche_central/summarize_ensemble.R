@@ -33,6 +33,22 @@ source(paste0(repo, '/econiche_central/functions.R'))
 model_filenames <- list.files(path = (data_dir_model))
 stat_filenames <- list.files(path = (data_dir_stats))
 
+#Need something else for reading in Rdata files - from Daniel
+#Function for loading data from a specific path
+
+fetch_from_rdata = function(file_location, item_name, use_grep = F){
+  load(file_location)
+  if(use_grep){
+    return(mget(grep(item_name, ls(), value=T)))
+  }else{
+    return(get(item_name))
+  }
+}
+
+model_list <- lapply(model_filenames, function(x) fetch_from_rdata(x, 'model', F)) #change file location
+
+
+
 #Reading in files and making into lists
 model_list <- lapply(paste0(data_dir_model, model_filenames), fread)
 stat_lis <- lapply(paste0(data_dir_stats, stat_filenames), fread)
