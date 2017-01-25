@@ -49,8 +49,8 @@ stats <- getStats(model)
 
 
 # Output model results
-write.csv(model, file = paste0(data_dir,  "/model_output/model_", run_date, jobnum,".csv"))
-write.csv(stats, file = paste0(data_dir, "/stats_output/stats_", run_date, jobnum,".csv"))
+save(model, file = paste0(data_dir,  "/model_output/model_", run_date, jobnum,".Rdata"))
+save(stats, file = paste0(data_dir, "/stats_output/stats_", run_date, jobnum,".Rdata"))
 
 
 
